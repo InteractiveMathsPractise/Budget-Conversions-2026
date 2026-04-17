@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Practise Money Conversions</title>
+
+<style>
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(120deg, #e3f2ff, #f9fcff);
+    margin: 0;
+}
+
+.container {
+    max-width: 950px;
+    margin: 30px auto;
+    background: white;
+    padding: 28px;
+    border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+}
+
+h1, h2 {
+    text-align: center;
+    color: #003366;
+}
+
+.button-row {
+    text-align: center;
+    margin: 22px 0;
+}
+
+button {
+    padding: 12px 22px;
+    margin: 6px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    background: #007acc;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover { background: #005fa3; }
+
+button.secondary { background: #6c757d; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #cfd8dc;
+    padding: 11px;
+}
+
+th {
+    background: #e8f2ff;
+}
+
+input {
+    width: 95px;
+    padding: 6px;
+    font-size: 16px;
+}
+
+.feedback {
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+.correct { color: green; }
+.wrong { color: red; }
+
+.hint-box {
+    background: #fff3cd;
+    padding: 8px;
+    margin-top: 6px;
+    border-radius: 6px;
+}
+
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- START SCREEN -->
+<div id="startScreen">
+<h1>What type of conversion would you like to practise?</h1>
+<div class="button-row">
+    <button onclick="startActivity('weekly')">Weekly conversions</button>
+    <button onclick="startActivity('fortnightly')">Fortnightly conversions</button>
+    <button onclick="startActivity('monthly')">Monthly conversions</button>
+</div>
+</div>
+
+<!-- LEVEL SCREEN -->
+<div id="levelScreen" class="hidden">
+<h2>Select difficulty level</h2>
+<div class="button-row">
+    <button onclick="loadLevel('easy')">Easy</button>
+    <button onclick="loadLevel('medium')">Medium</button>
+    <button onclick="loadLevel('hard')">Hard</button>
+</div>
+</div>
+
+<!-- ACTIVITY SCREEN -->
+<div id="activityScreen" class="hidden">
+<h2 id="activityTitle"></h2>
+
+<table>
+<thead>
+<tr>
+    <th>Income / Expense</th>
+    <th>Amount given</th>
+    <th id="targetHeader"></th>
+</tr>
+</thead>
+<tbody id="questionTable"></tbody>
+</table>
+
+<div class="button-row">
+    <button class="secondary" onclick="startAgain()">Start again</button>
+    <button class="secondary" onclick="newActivity()">New activity</button>
+</div>
+</div>
+
+</div>
+
+<script>
+const factors = {
+    week: 52,
+    fortnight: 26,
+    month: 12,
+    quarter: 4,
+    year: 1
+};
+
+let targetType = "";
+let levelType = "";
+let questions = [];
+
+function startActivity(type) {
+    targetType = type;
+    document.getElementById("startScreen").classList.add("hidden");
+    document.getElementById("levelScreen").classList.remove("hidden");
+}
+
+function loadLevel(level) {
+    levelType = level;
+    document.getElementById("levelScreen").classList.add("hidden");
+    document.getElementById("activityScreen").classList.remove("hidden");
+
+    const labels = {
+        weekly: "Weekly amount",
+        fortnightly: "Fortnightly amount",
+        monthly: "Monthly amount"
+    };
+
+    document.getElementById("activityTitle").innerText =
+        `Convert each amount to a ${labels[targetType].toLowerCase()}`;
+    document.getElementById("targetHeader").innerText = labels[targetType];
+
+    generateNewQuestions();
+}
+
+function randomAmount(min, max, step = 1) {
+    return Math.round(
+        (Math.floor(Math.random() * ((max - min) / step + 1)) * step + min) * 100
+    ) / 100;
+}
+
+function generateNewQuestions() {
+    const templates = [
+        { name: "Part‑time job", per: "week", range: [140, 260] },
+        { name: "Odd job money", per: "month", range: [120, 400] },
+        { name: "Mowing lawns", per: "year", range: [600, 1600] },
+        { name: "Phone plan", per: "week", range: [10, 20] },
+        { name: "Snacks", per: "month", range: [40, 90] },
+        { name: "Presents / gifts", per: "year", range: [80, 200] },
+        { name: "Bus fares", per: "week", range: [30, 60] },
+        { name: "Spotify", per: "month", range: [14.99, 19.99], step: 0.50 }
+    ];
+
+    const count =
+        levelType === "easy" ? 3 :
+        levelType === "medium" ? 4 : 5;
+
+    questions = templates.slice(0, count).map(t => ({
+        name: t.name,
+        per: t.per,
+        amt: randomAmount(t.range[0], t.range[1], t.step || 1),
+        attempts: 0
+    }));
+
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById("questionTable");
+    tbody.innerHTML = "";
+
+    const targetFactor =
+        targetType === "weekly" ? 52 :
+        targetType === "fortnightly" ? 26 : 12;
+
+    questions.forEach((q, i) => {
+        const annual = q.amt * factors[q.per];
+        q.answer = Math.round((annual / targetFactor) * 100) / 100;
+
+        tbody.innerHTML += `
+<tr>
+<td>${q.name}</td>
+<td>${q.amt} per ${q.per}</td>
+<td>
+<input type="number" step="0.01" onchange="checkAnswer(${i}, this)">
+<div id="fb${i}" class="feedback"></div>
+<div id="hint${i}" class="hint-box hidden">
+Calculation: ${q.amt} × ${factors[q.per]} ÷ ${targetFactor}
+</div>
+<div id="rev${i}" class="hint-box hidden">
+Answer: ${q.answer.toFixed(2)}
+</div>
+</td>
+</tr>`;
+    });
+}
+
+function checkAnswer(i, input) {
+    const q = questions[i];
+    const val = parseFloat(input.value);
+    const fb = document.getElementById(`fb${i}`);
+
+    if (isNaN(val)) return;
+
+    if (Math.abs(val - q.answer) < 0.005 && val !== q.answer) {
+        fb.innerHTML = "❗ Check your rounding again";
+        fb.className = "feedback wrong";
+        return;
+    }
+
+    if (val === q.answer) {
+        fb.innerHTML = "✅ Correct";
+        fb.className = "feedback correct";
+        return;
+    }
+
+    q.attempts++;
+    fb.innerHTML = "❌ Incorrect – try again";
+    fb.className = "feedback wrong";
+
+    if (q.attempts === 2) {
+        document.getElementById(`hint${i}`).classList.remove("hidden");
+    }
+
+    if (q.attempts >= 3) {
+        document.getElementById(`rev${i}`).classList.remove("hidden");
+    }
+}
+
+function startAgain() {
+    generateNewQuestions();
+}
+
+function newActivity() {
+    document.getElementById("activityScreen").classList.add("hidden");
+    document.getElementById("levelScreen").classList.add("hidden");
+    document.getElementById("startScreen").classList.remove("hidden");
+}
+</script>
+
+</body>
+</html>
+``
